@@ -1,43 +1,24 @@
 GROUP(-lgcc -lm -lc -liberty -lc ) /* libraries to link in */
 
-MEMORY /* describe the partitioning of the memory space for the application */ 
+
+MEMORY 
 {
-    /* This design will span a single PSRAM Chip */
-	/* the rom section will start at address 0 and be up to 2 megs in
-	 * length*/ 
-	rom (rx)  : ORIGIN = 0, l = 2M
-	/* the "ram" section will start at 0x0020'0000 which comes immediately after the rom space
-	 * the 32-bit address space and be 6 megs in size */
-	ram (!rx) : o = 0x00200000, l = 6M
-
-    /* This design will span the entire 64 megabyte space */
-	/* the rom section will start at address 0 and be up to 8 megs in
-	 * length*/
-	/* rom (rx)  : ORIGIN = 0, l = 8M */
-	/* the "ram" section will start at 0x0080'0000 which comes immediately after the rom space
-	 * the 32-bit address space and be 56 megs in size */
-	/* ram (!rx) : o = 0x00800000, l = 56M */
-
-	/* NOTE: do not uncomment these lines, this is here as a reference to the
-	 * design of the hitagi board */
-	/* primary io space starts at 0xFE00'0000 and is memory mapped io*/
-	/* io0 (!rx) : o = 0xFE000000, l = 16M  */
-	/* cpu_internal (!rwxail) : o = 0xFF000000, l = 16M - 1 */
-	/* NOTE: the chipset will catch any unmapped reads and writes, report them,
-	 * and either do nothing (on a write) or return zero (on a read)
+	/*
+	 * For the bootshim, we have 16k to work with to save space on the 1284p.
+	 * We want the entire program to fit within 128kb (that includes ram and rom)
 	 */
-
-
-	/* the format of a memory entry is: name (permissions) : <flags> 
-	ORIGIN or o is the starting location LENGTH or l is the length of the
-	memory section 
+	rom (rx)  : ORIGIN = 0, l = 16k
+	/**
+	 * We should allocate a small amount of stack to be on the safe side.
+	 * With this design, it is possible to use a special on board sram chip
+	 * or something like that for this purpose.
 	 */ 
-
+	ram (!rx) : o = 0x00004000, l = 64K
 } 
 
 /* Define a symbol that your code can reference. The linker adds the symbol. */ 
-
-STACK_SIZE = 0x10000; 
+/* Make the stack size a subset of the overal 64kb of storage */
+STACK_SIZE = 0x1000; 
 
 /* Layout the different ELF sections into memory using the above described
  * memory spaces */ 
@@ -80,12 +61,7 @@ SECTIONS
 		LONG(0) 
 		___DTOR_END__ = .; 
 
-	/* the arrow syntax tells the linker that the text section will go into the
-	 * memory location named "rom", it is sequential as we will see in the next
-	 * few sections*/ 
 	} >rom 
-	/* setup the bss section, tag it's start and end positions to allow the
-	 * i960 to manually zero out the memory on the sdcard's ram.bin file */ 
 	.bss : 
 	{ 
 		__bss_start__ = .; 
@@ -101,21 +77,8 @@ SECTIONS
 		__data_end__ = .; 
 		_edata = .; 
 	} >ram 
-	.heap : { 
-		/* this section is synthetic, I do not actually copy the contents of the heap
-		 * section over on boot, instead I just want the location of where it should
-		 * start.In this case, the heap will start _after_ the .bss and .data sections
-		 * in ram. It is placed linearly in order so there is no mystery to this. 
-		 */
-		__heap_start__ = .; 
-		end = __heap_start__; 
-		_end = end; 
-		__end = end; 
-		KEEP(*(.heap)) 
-		__heap_end__ = .; 
-		/* __HeapLimit = __heap_end__; */ 
-	
-	} >ram 
+	/*
+	 * Drop the heap because we don't want to support that for the boot shim*/
 }
 
 /* these two locations are _very_ important for getting the program to startup correctly */ 
@@ -155,10 +118,14 @@ SECTIONS
 
  */ 
 
+/*
 theDataSectionLength = (__data_end__ - __data_start__); 
 theDataSectionROMLocation = 0x20000000; 
+*/
 cs1 = -(system_address_table + prcb_ptr + start_ip) ; 
+/*
 theBSSSectionLength = (__bss_end__ - __bss_start__); 
+*/
 
 /* This directive allows you to denote the file that will go onto the front of
  * the text section, the problem is that with CMake this moves around. So
