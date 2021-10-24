@@ -90,3 +90,4 @@ fault_table:
     .word   0x2bf               # Reserved fault        entry 0 => _user_reserved
     .word   (0 << 2) | 0x2
     .word   0x2bf               # Reserved fault        entry 0 => _user_reserved
+

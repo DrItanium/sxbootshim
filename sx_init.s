@@ -155,51 +155,6 @@ fault_proc_table:
     .word (_user_type_core + 0x2)    # entry 8
 
  # processor starts execution at this spot upon power-up after self-test.
-_user_reserved_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_reserved
-	flushreg
-	ret
-_user_trace_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx  _user_trace
-	flushreg
-	ret
-_user_operation_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_operation
-	flushreg
-	ret
-_user_arithmetic_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_arithmetic
-	flushreg
-	ret
-_user_real_arithmetic_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_real_arithmetic
-	flushreg
-	ret
-_user_constraint_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_constraint
-	flushreg
-	ret
-_user_protection_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_protection
-	flushreg
-	ret
-_user_machine_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_machine
-	flushreg
-	ret
-_user_type_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_type
-	flushreg
-	ret
  start_ip:
     mov 0, g14 # C compiler expects g14 = 0
 
@@ -315,6 +270,51 @@ fix_stack:
     ret
 
 
+_user_reserved_core:
+	lda	-48(fp), g0	/* pass fault data */
+	callx _user_reserved
+	flushreg
+	ret
+_user_trace_core:
+	lda	-48(fp), g0	/* pass fault data */
+	callx  _user_trace
+	flushreg
+	ret
+_user_operation_core:
+	lda	-48(fp), g0	/* pass fault data */
+	callx _user_operation
+	flushreg
+	ret
+_user_arithmetic_core:
+	lda	-48(fp), g0	/* pass fault data */
+	callx _user_arithmetic
+	flushreg
+	ret
+_user_real_arithmetic_core:
+	lda	-48(fp), g0	/* pass fault data */
+	callx _user_real_arithmetic
+	flushreg
+	ret
+_user_constraint_core:
+	lda	-48(fp), g0	/* pass fault data */
+	callx _user_constraint
+	flushreg
+	ret
+_user_protection_core:
+	lda	-48(fp), g0	/* pass fault data */
+	callx _user_protection
+	flushreg
+	ret
+_user_machine_core:
+	lda	-48(fp), g0	/* pass fault data */
+	callx _user_machine
+	flushreg
+	ret
+_user_type_core:
+	lda	-48(fp), g0	/* pass fault data */
+	callx _user_type
+	flushreg
+	ret
 # we need to configure the interrupts as well on reinitialization boot
 defaultInterruptHandlerValue:
     .word 0xFCFDFEFF
