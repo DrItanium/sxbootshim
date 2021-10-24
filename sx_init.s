@@ -155,28 +155,35 @@ fault_proc_table:
  	# g2 - file path base address
  	# g3 - count
  	# g4 - temporary / open port base address
+	# g5 - zero temporary
  	lda configuration_space__sdcard_ctl_addr, g0		# get the address in config space for sdcard ctl
 	ld 0(g0), g0											# overwrite the contents of the register
 	lda configuration_space__sdcard_file_begin_addr, g1 # get the base address of each file
 	ld 0(g1), g1											# load the specific address
 	ldconst file_path, g2
 	ldconst 0, g3
+	ldconst 0, g5
 	# get the path to load from the sd card
 load_the_path:
-	ldb (g2)[g3*1], g4 # load a byte from the file_path
-	stb g4, (g0)[g3*1] # store that byte to path + offset
+	ldob (g2)[g3*1], g4 # load a byte from the file_path
+	stob g4, (g0)[g3*1] # store that byte to path + offset
 	addi g3, 1, g3     # increment g3 by 1
-	cmpine g4, 0, load_the_path # keep walking until you hit zero and stop
+	cmpibne g4, g5, load_the_path # keep walking until you hit zero and stop
 open_the_file:
-	stos 0, 106(g0) # clear out permissions
 	ldconst 0xFFFF, g3 # we want to mark it as readonly as true
-	stos 0, 108(g0) # not write only
+	stos g5, 106(g0) # clear out permissions
+	stos g5, 108(g0) # not write only
 	stos g3, 110(g0) # mark readonly
-	stos 0, 112(g0) # not read & write
-	stos 0, 114(g0) # do not create if missing
-	stos 0, 116(g0) # do not truncate
-	ldos 80(g0), g3 # load handle into memory
-
+	stos g5, 112(g0) # not read & write
+	stos g5, 114(g0) # do not create if missing
+	stos g5, 116(g0) # do not truncate
+	ldos 80(g0), g5 # get handle to sd card by reading from target port (g5)
+	cmpo g5, g3
+	bne successful_load
+	b no_boot_sys_message # this will just halt
+successful_load:
+	# so we have a successful halt at this point
+	
  /*
   * -- At this point, sxlibos has been copied into memory, 
   * -- The IAC message, found in the 4 words located at the reinitialize_iac label, contains pointers
@@ -193,11 +200,38 @@ move_data:
     ldq (g1)[g4*1], g8  # load 4 words into g8
     stq g8, (g2)[g4*1]  # store to RAM block
     addi g4,16, g4      # increment index
-    cmpibg  g0,g4, move_data # loop until done
+    cmpibg  g0,g4, move_data_loop # loop until done
     bx (g14)
-file_path:
-	.asciiz "boot.sys"
 
+no_boot_sys_message:
+	lda no_boot_sys_message, r3
+	bal print_message
+	bal halt_system
+
+print_message:
+	# broke ass calling conventions
+	# r3 - pointer to message
+	# r4 - serial console address (derived internally)
+	# r5 - terminator compare
+	# r6 - temporary
+	lda configuration_space__serial0_base, r4
+	ld 0(r4), r4
+	ldconst 0, r5
+print_message_loop:
+	ldob 0(r3), r6 # load the byte
+	stob r6, 0(r4) # transfer it to the output port
+	addi r3, 1, r3 # increment r3
+	cmpibne r5, r6, print_message_loop
+	bx (g14)
+halt_system:
+	ldconst 0, g14
+	b halt_system
+
+file_path:
+	.asciz "boot.sys"
+no_boot_sys_message:
+	.asciz "no boot.sys!\n"
+	
 # stub all fault handlers
 _user_trace_core:
 _user_operation_core:

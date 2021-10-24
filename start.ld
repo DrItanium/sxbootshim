@@ -30,7 +30,7 @@ SECTIONS
 cs1 = -(system_address_table + prcb_ptr + start_ip) ; 
 configuration_space_base = 0xFE000000 ;
 configuration_space_page0 = configuration_space_base + 0x00 ;
-
+configuration_space__serial0_base = configuration_space_page0 + 0;
 configuration_space__sdcard_ctl_addr = configuration_space_page0 + 4;
 configuration_space__sdcard_file_begin_addr = configuration_space_page0 + 8;
 
@@ -49,4 +49,4 @@ sxlibos_program_space_end = sxlibos_space_start + 0x40000;
  * safe fixed addresses
  */
 sxlibos_system_address_table_start = sxlibos_program_space_end;
-sxlibos_prcb_ptr_start = sxlibos_space_start + 0xb0; 
+sxlibos_prcb_ptr_start = sxlibos_program_space_end + 0xb0; 
