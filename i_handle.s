@@ -24,8 +24,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 .text 
 
-.global _user_intr
-_user_intr:
+.global _user_intr0
+_user_intr0:
 /* -- We allocate a spot for a "register holder" on the stack
  *    and store data to that spot. We will take advantage of
  *    the fact that this will be allocated at the first spot on the stack
@@ -41,6 +41,102 @@ _user_intr:
 /* -- Interrupt handler to go here */
         ldconst 0, g14 # c compiler expects g14 to be 0
         call    _ISR0
+
+/* restore the registers before we return */
+        ldq     -64(sp), g0
+        ldq     -48(sp), g4
+        ldq     -32(sp), g8
+        ldq     -16(sp), g12
+        ret
+.global _user_intr1
+_user_intr1:
+/* -- We allocate a spot for a "register holder" on the stack
+ *    and store data to that spot. We will take advantage of
+ *    the fact that this will be allocated at the first spot on the stack
+ */
+        ldconst 64, r4
+        addo    sp, r4, sp
+
+        stq     g0, -64(sp)
+        stq     g4, -48(sp)
+        stq     g8, -32(sp)
+        stt     g12, -16(sp)
+
+/* -- Interrupt handler to go here */
+        ldconst 0, g14 # c compiler expects g14 to be 0
+        call    _ISR1
+
+/* restore the registers before we return */
+        ldq     -64(sp), g0
+        ldq     -48(sp), g4
+        ldq     -32(sp), g8
+        ldq     -16(sp), g12
+        ret
+.global _user_intr2
+_user_intr2:
+/* -- We allocate a spot for a "register holder" on the stack
+ *    and store data to that spot. We will take advantage of
+ *    the fact that this will be allocated at the first spot on the stack
+ */
+        ldconst 64, r4
+        addo    sp, r4, sp
+
+        stq     g0, -64(sp)
+        stq     g4, -48(sp)
+        stq     g8, -32(sp)
+        stt     g12, -16(sp)
+
+/* -- Interrupt handler to go here */
+        ldconst 0, g14 # c compiler expects g14 to be 0
+        call    _ISR2
+
+/* restore the registers before we return */
+        ldq     -64(sp), g0
+        ldq     -48(sp), g4
+        ldq     -32(sp), g8
+        ldq     -16(sp), g12
+        ret
+.global _user_intr3
+_user_intr3:
+/* -- We allocate a spot for a "register holder" on the stack
+ *    and store data to that spot. We will take advantage of
+ *    the fact that this will be allocated at the first spot on the stack
+ */
+        ldconst 64, r4
+        addo    sp, r4, sp
+
+        stq     g0, -64(sp)
+        stq     g4, -48(sp)
+        stq     g8, -32(sp)
+        stt     g12, -16(sp)
+
+/* -- Interrupt handler to go here */
+        ldconst 0, g14 # c compiler expects g14 to be 0
+        call    _ISR3
+
+/* restore the registers before we return */
+        ldq     -64(sp), g0
+        ldq     -48(sp), g4
+        ldq     -32(sp), g8
+        ldq     -16(sp), g12
+        ret
+.global _bad_intr
+_bad_intr:
+/* -- We allocate a spot for a "register holder" on the stack
+ *    and store data to that spot. We will take advantage of
+ *    the fact that this will be allocated at the first spot on the stack
+ */
+        ldconst 64, r4
+        addo    sp, r4, sp
+
+        stq     g0, -64(sp)
+        stq     g4, -48(sp)
+        stq     g8, -32(sp)
+        stt     g12, -16(sp)
+
+/* -- Interrupt handler to go here */
+        ldconst 0, g14 # c compiler expects g14 to be 0
+        call    _ISRBad
 
 /* restore the registers before we return */
         ldq     -64(sp), g0
