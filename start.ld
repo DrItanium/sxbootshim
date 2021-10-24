@@ -32,5 +32,25 @@ SECTIONS
  * fixed addresses as well. 
  */
 cs1 = -(system_address_table + prcb_ptr + start_ip) ; 
-sxlibos_start = 0x4000 ;
+configuration_space_base = 0xFE000000 ;
+configuration_space_page0 = configuration_space_base + 0x00 ;
+# we need the sdcard ctl and file locations to work from
+configuration_space__sdcard_ctl_addr = configuration_space_page0 + 4;
+configuration_space__sdcard_file_begin_addr = configuration_space_page0 + 8;
 
+/*
+ *
+ * Using hitagimon as a base, I am going to denote fixed addresses for the
+ * important processor structures. These are aligned correctly within the
+ * program itself so it should all work out
+ */
+sxlibos_space_start = 0x4000;
+sxlibos_program_space_start = sxlibos_space_start ;
+sxlibos_program_space_end = sxlibos_space_start + 0x40000;
+
+/*
+ * Make the sat and prcb come _after_ the sxlibos code itself so that we have
+ * safe fixed addresses
+ */
+sxlibos_system_address_table_start = sxlibos_program_space_end;
+sxlibos_prcb_ptr_start = sxlibos_space_start + 0xb0; 

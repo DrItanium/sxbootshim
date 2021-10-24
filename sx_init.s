@@ -36,14 +36,8 @@
 
 .global system_address_table
 .global prcb_ptr
-.global _prcb_ram
 .global start_ip
 .global cs1
-
-.global _user_stack
-.global _sup_stack # supervisor stack
-.global _intr_stack # interrupt stack
-
 
 # Core Initialization Block (located at address 0)
 # 8 words
@@ -78,9 +72,8 @@ system_address_table:
     .word fault_proc_table
     .word 0x304000fb            # initialization words
 
-# initial PRCB
-# this is our startup PRCB. After initialization.
-# this will be copied to RAM
+
+# phony prcb
 
 prcb_ptr:
     .word 0x0 # 0 - reserved
@@ -88,8 +81,8 @@ prcb_ptr:
     .word 0x0 # 8 - reserved
     .word 0x0 # 12 - reserved
     .word 0x0 # 16 - reserved
-    .word intr_table # 20 - interrupt table address
-    .word _intr_stack # 24 - interrupt stack pointer
+    .word 0x0 # 20 - interrupt table address
+    .word 0x0 # 24 - interrupt stack pointer
     .word 0x0 # 28 - reserved
     .word 0x000001ff  # 32 - pointer to offset zero
     .word 0x0000027f  # 36 - system procedure table pointer
@@ -106,7 +99,7 @@ sys_proc_table:
     .word 0 # Reserved
     .word 0 # Reserved
     .word 0 # Reserved
-    .word (_sup_stack + 0x1) # Supervisor stack pointer
+    .word (0x0 + 0x1) # Supervisor stack pointer
     .word 0 # Preserved
     .word 0 # Preserved
     .word 0 # Preserved
@@ -135,7 +128,7 @@ fault_proc_table:
     .word 0 # Reserved
     .word 0 # Reserved
     .word 0 # Reserved
-    .word _sup_stack # Supervisor stack pointer
+    .word 0 # Supervisor stack pointer
     .word 0 # Preserved
     .word 0 # Preserved
     .word 0 # Preserved
@@ -153,37 +146,21 @@ fault_proc_table:
     .word (_user_protection_core + 0x2)    # entry 6
     .word (_user_machine_core + 0x2)    # entry 7
     .word (_user_type_core + 0x2)    # entry 8
-
+.global configuration_space__sdcard_file_begin_addr
+.global configuration_space__sdcard_ctl_addr
  # processor starts execution at this spot upon power-up after self-test.
  start_ip:
-    mov 0, g14 # C compiler expects g14 = 0
+	# g0 - sdctl base address
+ 	# g1 - sd file 0 base address
+ 	lda configuration_space__sdcard_ctl_addr, g0		# get the address in config space for sdcard ctl
+	ld 0(g0), g0											# overwrite the contents of the register
+	lda configuration_space__sdcard_file_begin_addr, g1 # get the base address of each file
+	ld 0(g1), g1											# load the specific address
 
-# enable address debugging
-    # lda 0xFE000022, g8
-    # lda 0x1, g9
-    # st g9, 0(g8)
-    # copy the interrupt table to RAM space
-    lda 1028, g0 # load length of the interrupt table
-    lda 0, g4 # initialize offset to 0
-    lda intr_table, g1 # load source
-    lda intr_ram, g2    # load address of new table
-    bal move_data # branch to move routine
 
-# copy PRCB to RAM space, located at _prcb_ram
-
-    lda 176,g0 # load length of PRCB
-    lda 0, g4 # initialize offset to 0
-    lda prcb_ptr, g1 # load source
-    lda _prcb_ram, g2 # load destination
-    bal move_data # branch to move routine
- # fix up the PRCB to point to a new interrupt table
-    lda intr_ram, g12 # load address
-    st g12, 20(g2) # store into PRCB
 
  /*
-  * -- At this point, the PRCB, and interrupt table have been moved to RAM.
-  *    It is time to issue a reinitialize IAC, which will start us anew with our RAM based PRCB.
-  *
+  * -- At this point, sxlibos has been copied into memory, 
   * -- The IAC message, found in the 4 words located at the reinitialize_iac label, contains pointers
   *    to the current System Address Table, the new RAM based PRCB, and to the Instruction Pointer
   *    labeled start_again_ip
@@ -201,137 +178,21 @@ move_data:
     cmpibg  g0,g4, move_data # loop until done
     bx (g14)
 
-start_again_ip:
-  /* -- this would be a good place to diable board interrupts if you are using an interrupt controller.
-   *
-   * -- Before call to main, we need to take the processor out of the "interrupted" state.
-   *    In order to do this, we will execute a call statement, then "fix up" the stack frame
-   *    to cause an interrupt return to be executed.
-   */
-    ldconst 64, g0 # bump up stack to make
-    addo sp, g0, sp # room for simulated
-                    # interrupt frame
 
-    call fix_stack  # routine to turn off int state
-
-    lda _user_stack, fp     # setup user stack space
-    lda -0x40(fp), pfp      # load pfp (just in case)
-    lda 0x40(fp), sp        # set up current stack pointer
-
-/* -- This is the point where your main code is called.
- *    If any IO needs to be set up, you should do it here before your
- *    call to main. No opens have been done for STDIN, STDOUT, or STDERR
- */
-.ifdef __i960SB__
-    callx _init_fp
-.endif
-    callx setupInterruptHandler
-    #callx _activate_read_write_transactions
-    mov 0, g14      # C compiler expects g14 = 0
-    callx application_start # application_start is generally going to be main
-
-_return_from_main:
-	# if we get here, just sit and spin
-	b _return_from_main
-
-.ifdef __i960SB__
-_init_fp:
-    # initialize the floating point registers
-    cvtir   0, fp0
-    movre   fp0, fp1
-    movre   fp1, fp2
-    movre   fp2, fp3
-    ret
-.endif
-
-setupInterruptHandler:
-    # setup the interrupt handlers to work correctly
-    lda 0xff000004, g5
-    # give maximum priority to the interrupt handlers
-    lda defaultInterruptHandlerValue, g6
-    synmov g5, g6
-    ret
-/* The routine below fixes up the stack for a flase interrupt return.
- * We have reserved area on the stack before the call to this
- * routine. We need to build a phony interrupt record here
- * to force the processor to pick it up on return. Also, we
- * will take advantage of the fact that the processor will
- * restore the PC and AC to its registers
- */
-
-fix_stack:
-    flushreg
-    or  pfp, 7, pfp     # put interrupt return code into pfp
-
-    ldconst 0x1f0002, g0
-    st  g0, -16(fp)     # store contrived PC
-    ldconst 0x3b001000, g0  # setup arithmetic controls
-    st  g0, -12(fp)     # store contrived AC
-    ret
-
-
-_user_reserved_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_reserved
-	flushreg
-	ret
+# stub all fault handlers
 _user_trace_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx  _user_trace
-	flushreg
-	ret
 _user_operation_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_operation
-	flushreg
-	ret
 _user_arithmetic_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_arithmetic
-	flushreg
-	ret
 _user_real_arithmetic_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_real_arithmetic
-	flushreg
-	ret
 _user_constraint_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_constraint
-	flushreg
-	ret
 _user_protection_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_protection
-	flushreg
-	ret
 _user_machine_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_machine
-	flushreg
-	ret
 _user_type_core:
-	lda	-48(fp), g0	/* pass fault data */
-	callx _user_type
 	flushreg
 	ret
-# we need to configure the interrupts as well on reinitialization boot
-defaultInterruptHandlerValue:
-    .word 0xFCFDFEFF
-    .align 4 # Align BEFORE the label...holy crap
 reinitialize_iac:
     .word 0x93000000        # reinitialize IAC message
-    .word system_address_table
-    .word _prcb_ram         # use newly copied PRCB
-    .word start_again_ip # now finish configuration
-  /* -- The process will begin execution here after being reinitialized.
-   *    We will now setup the stacks and continue.
-   */
-
-    .bss intr_ram, 1028, 6
-    .bss _prcb_ram, 176, 6
-    .bss _user_stack, 0x1000, 6
-    .bss _intr_stack, 0x1000, 6
-    .bss _sup_stack, 0x1000, 6
-
+    .word sxlibos_system_address_table_start 
+    .word sxlibos_prcb_ptr_start      # use newly copied PRCB
+    .word sxlibos_program_space_start # now finish configuration
 

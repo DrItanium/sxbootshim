@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(hitagimon VERSION 0.1)
+project(sxbootshim VERSION 0.1)
 enable_language(CXX C ASM-ATT)
 set(CMAKE_CXX_STANDARD 98)
 
@@ -28,6 +28,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 add_executable(sxbootshim
 		sx_init.s
+		dummy.c
 )
 
 #set_target_properties(hitagimon PROPERTIES LINK_DEPENDS ${CMAKE_SOURCE_DIR}/${LINKER_SCRIPT})
