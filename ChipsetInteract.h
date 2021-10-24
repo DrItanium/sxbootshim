@@ -23,47 +23,17 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 //
-// Created by jwscoggins on 6/29/21.
+// Created by jwscoggins on 5/2/21.
 //
 
-#include <unistd.h>
-#include <errno.h>
-#include "IODevice.h"
-
-namespace
-{
-    int
-    sys_read(int fd, void *buf, size_t sz, int &nread) {
-        nread = 0;
-        if (fd > 2) {
-            if (getBasicChipsetInterface().readFile(fd - 3, buf, sz, nread)) {
-                return 0;
-            } else {
-                return EBADF;
-            }
-        } else {
-            // builtin files
-            switch (fd) {
-                case STDIN_FILENO:
-                    nread = getBasicChipsetInterface().read(reinterpret_cast<char *>(buf), sz);
-                    return 0;
-                default:
-                    return EBADF;
-            }
-        }
-    }
-}
-
-extern "C"
-int
-read (int fd, void* buf, size_t sz) {
-    //printf("read(%d, 0x%x, %ld)\n", fd, buf, sz);
-    int nread = 0;
-    int r = sys_read (fd, buf, sz, nread);
-    if (r != 0)
-    {
-        errno = r;
-        return -1;
-    }
-    return nread;
-}
+#ifndef I960SXCHIPSET_PERIPHERALS_H
+#define I960SXCHIPSET_PERIPHERALS_H
+#include <stdint.h>
+// I would love to mark these as constexpr but I don't have access to C++11 and later
+const uint32_t IOBase0Address = 0xFE000000;
+const uint32_t IOBase0Mask = 0x00FFFFFF;
+template<typename T>
+inline volatile T& memory(const uint32_t address) { return *reinterpret_cast<T*>(address); }
+inline uint32_t getIOBase0Address(const uint32_t offset) { return IOBase0Address + (offset & IOBase0Mask); }
+inline volatile uint8_t& iobase0Memory(const uint32_t offset = 0) { return memory<uint8_t>(getIOBase0Address(offset)); }
+#endif //I960SXCHIPSET_PERIPHERALS_H

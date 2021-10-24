@@ -52,7 +52,9 @@ read.cc
 setitimer.cc
 unlink.cc
 write.cc
-
+IODevice.h
+IODevice.cc
+ChipsetInteract.h
 )
 
 #set_target_properties(hitagimon PROPERTIES LINK_DEPENDS ${CMAKE_SOURCE_DIR}/${LINKER_SCRIPT})
