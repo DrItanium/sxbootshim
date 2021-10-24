@@ -1,25 +1,19 @@
 GROUP(-lgcc -lm -lc -liberty -lc ) /* libraries to link in */
 
-
 MEMORY 
 {
-	/*
-	 * For the bootshim, we have 16k to work with to save space on the 1284p.
-	 * We want the entire program to fit within 128kb (that includes ram and rom).
-	 * This can go as large as 256kb total. At 
+	/**
+	 * This is evolving from a bootshim into a tiny library operating system.
+	 * Thus we provide 256k of program code and 768k of ram.
 	 */
-	rom (rx)  : ORIGIN = 0, l = 16k
+	rom (rx)  : ORIGIN = 0, l = 256k
 	/**
 	 * We should allocate a small amount of stack to be on the safe side.
 	 * With this design, it is possible to use a special on board sram chip
 	 * or something like that for this purpose.
 	 */ 
-	ram (!rx) : o = 0x00004000, l = 64K
+	ram (!rx) : o = 0x00020000, l = 768K
 } 
-
-/* Define a symbol that your code can reference. The linker adds the symbol. */ 
-/* Make the stack size a subset of the overal 64kb of storage */
-STACK_SIZE = 0x1000; 
 
 /* Layout the different ELF sections into memory using the above described
  * memory spaces */ 
@@ -78,8 +72,21 @@ SECTIONS
 		__data_end__ = .; 
 		_edata = .; 
 	} >ram 
-	/*
-	 * Drop the heap because we don't want to support that for the boot shim*/
+	.heap : { 
+		/* this section is synthetic, I do not actually copy the contents of the heap
+		 * section over on boot, instead I just want the location of where it should
+		 * start.In this case, the heap will start _after_ the .bss and .data sections
+		 * in ram. It is placed linearly in order so there is no mystery to this. 
+		 */
+		__heap_start__ = .; 
+		end = __heap_start__; 
+		_end = end; 
+		__end = end; 
+		KEEP(*(.heap)) 
+		__heap_end__ = .; 
+		/* __HeapLimit = __heap_end__; */ 
+	
+	} >ram 
 }
 
 /* these two locations are _very_ important for getting the program to startup correctly
@@ -92,7 +99,11 @@ SECTIONS
 
 
 cs1 = -(system_address_table + prcb_ptr + start_ip) ; 
-
+/* 
+ * start the application itself at 1 megabyte. 
+ * give the bootshim/os space to expand and work in.
+ */
+application_start = 0x100000 ;
 
 /* Currently, I am manually decomposing the elf binary into ROM (.text) and DAT
  * (.data) files from the ELF using objcopy.  

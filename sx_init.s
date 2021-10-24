@@ -1,36 +1,36 @@
 /*
-i960SxChipset
-Copyright (c) 2020-2021, Joshua Scoggins
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * i960SxChipset
+ * Copyright (c) 2020-2021, Joshua Scoggins
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 
 # NOTE: this code is taken from the initialization code found in the i960Sx manual
 
-/*
-Below is the system initialization code and tables.
-The code builds the PRCB (PRocessor Control Block) in memory, sets up the stack frame, the interrupt,
-fault, and system procedure tables, and then vectors to a user defined routine. *main*
-*/
+/**
+ * Below is the system initialization code and tables.
+ * The code builds the PRCB (PRocessor Control Block) in memory, sets up the stack frame, the interrupt,
+ * fault, and system procedure tables, and then vectors to a user defined routine. *main*
+ */
 
 # declare ahead of time
 
@@ -213,9 +213,6 @@ _user_type_core:
     lda intr_table, g1 # load source
     lda intr_ram, g2    # load address of new table
     bal move_data # branch to move routine
-    # lda 0xFE000022, g8
-    # lda 0, g9
-    # st g9, 0(g8)
 
 # copy PRCB to RAM space, located at _prcb_ram
 
@@ -240,17 +237,16 @@ _user_type_core:
     lda reinitialize_iac, g6
     synmovq g5, g6
 
-    .align 4 # Align BEFORE the label...holy crap
-reinitialize_iac:
-    .word 0x93000000    # reinitialize IAC message
-    .word system_address_table
-    .word _prcb_ram     # use newly copied PRCB
-    .word start_again_ip    # start here
-  /* -- The process will begin execution here after being reinitialized.
-   *    We will now setup the stacks and continue.
-   */
+/* -- Below is a software loop to move data */
 
-  start_again_ip:
+move_data:
+    ldq (g1)[g4*1], g8  # load 4 words into g8
+    stq g8, (g2)[g4*1]  # store to RAM block
+    addi g4,16, g4      # increment index
+    cmpibg  g0,g4, move_data # loop until done
+    bx (g14)
+
+start_again_ip:
   /* -- this would be a good place to diable board interrupts if you are using an interrupt controller.
    *
    * -- Before call to main, we need to take the processor out of the "interrupted" state.
@@ -277,7 +273,11 @@ reinitialize_iac:
     callx setupInterruptHandler
     #callx _activate_read_write_transactions
     mov 0, g14      # C compiler expects g14 = 0
-    callx _main     # assume a main for startup
+    callx application_start # application_start is generally going to be main
+
+_return_from_main:
+	# if we get here, just sit and spin
+	b _return_from_main
 
 .ifdef __i960SB__
 _init_fp:
@@ -296,33 +296,6 @@ setupInterruptHandler:
     lda defaultInterruptHandlerValue, g6
     synmov g5, g6
     ret
-
-
-defaultInterruptHandlerValue:
-    .word 0xFCFDFEFF
-/* -- define RAM area to copy the PRCB and interrupt table
- *    to after initial bootup from EPROM/FLASH
- */
-    .bss intr_ram, 1028, 6
-    .bss _prcb_ram, 176, 6
- /* -- define RAM area for stacks; size is only a suggestion your actual
-  *    mileage may vary
-  */
-    .bss _user_stack, 0x10000, 6
-    .bss _intr_stack, 0x10000, 6
-    .bss _sup_stack, 0x10000, 6
-
-/* -- Below is a software loop to move data */
-
-move_data:
-    ldq (g1)[g4*1], g8  # load 4 words into g8
-    stq g8, (g2)[g4*1]  # store to RAM block
-    addi g4,16, g4      # increment index
-    cmpibg  g0,g4, move_data # loop until done
-    bx (g14)
-
-# setup the bss section so do giant blocks of writes
-
 /* The routine below fixes up the stack for a flase interrupt return.
  * We have reserved area on the stack before the call to this
  * routine. We need to build a phony interrupt record here
@@ -340,5 +313,25 @@ fix_stack:
     ldconst 0x3b001000, g0  # setup arithmetic controls
     st  g0, -12(fp)     # store contrived AC
     ret
+
+
+# we need to configure the interrupts as well on reinitialization boot
+defaultInterruptHandlerValue:
+    .word 0xFCFDFEFF
+    .align 4 # Align BEFORE the label...holy crap
+reinitialize_iac:
+    .word 0x93000000        # reinitialize IAC message
+    .word system_address_table
+    .word _prcb_ram         # use newly copied PRCB
+    .word start_again_ip # now finish configuration
+  /* -- The process will begin execution here after being reinitialized.
+   *    We will now setup the stacks and continue.
+   */
+
+    .bss intr_ram, 1028, 6
+    .bss _prcb_ram, 176, 6
+    .bss _user_stack, 0x1000, 6
+    .bss _intr_stack, 0x1000, 6
+    .bss _sup_stack, 0x1000, 6
 
 
