@@ -34,8 +34,26 @@ add_executable(sxlibos
 		f_handle.cc
 		ISR.cc
 		Faults.h
-		Faults.cc)
+		Faults.cc
 
+access.cc
+brk.cc
+close.cc
+_exit.cc
+fstat.cc
+getpid.cc
+gettimeofday.cc
+isatty.cc
+kill.cc
+link.cc
+lseek.cc
+open.cc
+read.cc
+setitimer.cc
+unlink.cc
+write.cc
+
+)
 
 #set_target_properties(hitagimon PROPERTIES LINK_DEPENDS ${CMAKE_SOURCE_DIR}/${LINKER_SCRIPT})
 target_link_libraries(sxlibos
