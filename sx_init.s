@@ -180,7 +180,8 @@ open_the_file:
 	ldos 80(g0), g5 # get handle to sd card by reading from target port (g5)
 	cmpo g5, g3
 	bne successful_load
-	b no_boot_sys_message # this will just halt
+	b print_no_boot_sys_message # this will just halt
+
 successful_load:
 	# so we have a successful halt at this point
 	
@@ -200,11 +201,11 @@ move_data:
     ldq (g1)[g4*1], g8  # load 4 words into g8
     stq g8, (g2)[g4*1]  # store to RAM block
     addi g4,16, g4      # increment index
-    cmpibg  g0,g4, move_data_loop # loop until done
+    cmpibg  g0,g4, move_data # loop until done
     bx (g14)
 
-no_boot_sys_message:
-	lda no_boot_sys_message, r3
+print_no_boot_sys_message:
+	ldconst no_boot_sys_message, r3
 	bal print_message
 	bal halt_system
 
