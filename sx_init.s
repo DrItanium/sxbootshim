@@ -152,12 +152,30 @@ fault_proc_table:
  start_ip:
 	# g0 - sdctl base address
  	# g1 - sd file 0 base address
+ 	# g2 - file path base address
+ 	# g3 - count
+ 	# g4 - temporary / open port base address
  	lda configuration_space__sdcard_ctl_addr, g0		# get the address in config space for sdcard ctl
 	ld 0(g0), g0											# overwrite the contents of the register
 	lda configuration_space__sdcard_file_begin_addr, g1 # get the base address of each file
 	ld 0(g1), g1											# load the specific address
-
-
+	ldconst file_path, g2
+	ldconst 0, g3
+	# get the path to load from the sd card
+load_the_path:
+	ldb (g2)[g3*1], g4 # load a byte from the file_path
+	stb g4, (g0)[g3*1] # store that byte to path + offset
+	addi g3, 1, g3     # increment g3 by 1
+	cmpine g4, 0, load_the_path # keep walking until you hit zero and stop
+open_the_file:
+	stos 0, 106(g0) # clear out permissions
+	ldconst 0xFFFF, g3 # we want to mark it as readonly as true
+	stos 0, 108(g0) # not write only
+	stos g3, 110(g0) # mark readonly
+	stos 0, 112(g0) # not read & write
+	stos 0, 114(g0) # do not create if missing
+	stos 0, 116(g0) # do not truncate
+	ldos 80(g0), g3 # load handle into memory
 
  /*
   * -- At this point, sxlibos has been copied into memory, 
@@ -177,7 +195,8 @@ move_data:
     addi g4,16, g4      # increment index
     cmpibg  g0,g4, move_data # loop until done
     bx (g14)
-
+file_path:
+	.asciiz "boot.sys"
 
 # stub all fault handlers
 _user_trace_core:
