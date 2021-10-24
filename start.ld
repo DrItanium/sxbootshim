@@ -5,7 +5,8 @@ MEMORY
 {
 	/*
 	 * For the bootshim, we have 16k to work with to save space on the 1284p.
-	 * We want the entire program to fit within 128kb (that includes ram and rom)
+	 * We want the entire program to fit within 128kb (that includes ram and rom).
+	 * This can go as large as 256kb total. At 
 	 */
 	rom (rx)  : ORIGIN = 0, l = 16k
 	/**
@@ -81,8 +82,16 @@ SECTIONS
 	 * Drop the heap because we don't want to support that for the boot shim*/
 }
 
-/* these two locations are _very_ important for getting the program to startup correctly */ 
+/* these two locations are _very_ important for getting the program to startup correctly
+ * The first is the checksum value cs1. The second is where main will start
+ * from when we jump to the program. We need to be careful with the second
+ * location because it is a fixed address. In this case, it will be at address
+ * 0x40000. The bootshim needs to not only contain the ipl but a place to stash
+ * the basic library routines as well. 
+ */
 
+
+cs1 = -(system_address_table + prcb_ptr + start_ip) ; 
 
 
 /* Currently, I am manually decomposing the elf binary into ROM (.text) and DAT
@@ -118,22 +127,7 @@ SECTIONS
 
  */ 
 
-/*
-theDataSectionLength = (__data_end__ - __data_start__); 
-theDataSectionROMLocation = 0x20000000; 
-*/
-cs1 = -(system_address_table + prcb_ptr + start_ip) ; 
-/*
-theBSSSectionLength = (__bss_end__ - __bss_start__); 
-*/
 
-/* This directive allows you to denote the file that will go onto the front of
- * the text section, the problem is that with CMake this moves around. So
- * instead, I just make sure that sx_init.s is the first file in the list of
- * dependencies in CMakeFiles.txt. It does the same thing as the linker
- * appplies objects on a first come first serve basis. Very nice! */ 
-
-/* STARTUP ( CMakeFiles/hitagimon.dir/sx_init.s.o ) */ 
 
 /*
 
