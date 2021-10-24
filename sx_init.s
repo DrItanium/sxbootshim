@@ -86,7 +86,7 @@ prcb_ptr:
     .word 0x0 # 28 - reserved
     .word 0x000001ff  # 32 - pointer to offset zero
     .word 0x0000027f  # 36 - system procedure table pointer
-    .word fault_table # 40 - fault table
+    .word 0 # 40 - fault table
     .word 0x0 # 44 - reserved
     .space 32 # 48 - reserved
     .space 92 # 80 - scratch space
@@ -188,6 +188,7 @@ _user_constraint_core:
 _user_protection_core:
 _user_machine_core:
 _user_type_core:
+_user_reserved_core:
 	flushreg
 	ret
 reinitialize_iac:

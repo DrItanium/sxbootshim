@@ -18,11 +18,7 @@ SECTIONS
 	/* this is the text section */ 
 	.text : 
 	{ 
-
 		*(.text) 	/* place the actual contents of the text section here */ 
-
-		_etext = .; /* define a symbol named _etext and assign it to the
-					   address following the end of the text section data */ 
 	} >rom 
 }
 
@@ -34,7 +30,7 @@ SECTIONS
 cs1 = -(system_address_table + prcb_ptr + start_ip) ; 
 configuration_space_base = 0xFE000000 ;
 configuration_space_page0 = configuration_space_base + 0x00 ;
-# we need the sdcard ctl and file locations to work from
+
 configuration_space__sdcard_ctl_addr = configuration_space_page0 + 4;
 configuration_space__sdcard_file_begin_addr = configuration_space_page0 + 8;
 
