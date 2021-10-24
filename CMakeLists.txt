@@ -26,7 +26,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
-add_executable(sxbootshim
+add_executable(sxlibos
 		sx_init.s
 		f_table.s
 		i_handle.s
@@ -38,7 +38,7 @@ add_executable(sxbootshim
 
 
 #set_target_properties(hitagimon PROPERTIES LINK_DEPENDS ${CMAKE_SOURCE_DIR}/${LINKER_SCRIPT})
-target_link_libraries(sxbootshim
+target_link_libraries(sxlibos
 		gcc
 		c
 		m

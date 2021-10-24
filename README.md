@@ -1,5 +1,8 @@
-sxbootshim is a tiny program meant to be installed into the flash of an
-atmega1284p or an external FRAM chip. It is supposed to provide the initial 
-bootstrap of the system which is responsible for opening boot.sys off of the 
-sdcard and installing that into memory. Ideally, the boot.sys.program would 
-be completely unaware of the boot shim. It would just have a different base offset. 
+sxlibos is a tiny library "operating system" for the i960Sx hitagi
+mainboard. It requires a megabyte of memory to hold it's program and ram. The
+objective of this shim is to abstract the details about the platform from the
+program in question. All of the code found in the hitagimon will be shoved in
+to this new boot.sys. 
+
+This image will be loaded off of the sdcard into ram by the microcontroller on
+startup.
