@@ -8,7 +8,7 @@ MEMORY
 	 * this point. If it is necessary then I'll figure that out at that point
 	 * in time
 	 */
-	rom (rx)  : ORIGIN = 0, l = 16k
+	rom (rx)  : ORIGIN = 0, l = 1k
 }
 
 /* Layout the different ELF sections into memory using the above described
