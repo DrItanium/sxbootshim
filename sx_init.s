@@ -254,7 +254,7 @@ _user_reserved_core:
 	flushreg
 	ret
 file_path:
-	.asciz "boot.sys"
+	.asciz "sxlibos.rom"
 no_boot_sys_message:
-	.asciz "no boot.sys!\n"
+	.asciz "no sxlibos.rom!\n"
 	

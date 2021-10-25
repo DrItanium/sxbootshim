@@ -1,0 +1,4 @@
+#!/bin/bash
+
+i960-elf-objcopy --only-section=.text -O binary build/sxbootshim boot.data
+xxd -i boot.data > bootrom.h
