@@ -173,18 +173,23 @@ load_the_path:
 	addi g3, 1, g3     # increment g3 by 1
 	cmpibne g4, g5, load_the_path # keep walking until you hit zero and stop
 open_the_file:
-	ldconst 0xFFFF, g3 # we want to mark it as readonly as true
+	ldconst -1, g3 # we want to mark it as readonly as true
 	stos g5, 106(g0) # clear out permissions
 	stos g5, 108(g0) # not write only
 	stos g3, 110(g0) # mark readonly
 	stos g5, 112(g0) # not read & write
 	stos g5, 114(g0) # do not create if missing
 	stos g5, 116(g0) # do not truncate
+	ldconst 0, g5
+	ldconst 0xFFFF, g3
 	ldos 80(g0), g5 # get handle to sd card by reading from target port (g5)
-	cmpo g5, g3
-	bne successful_load
-	b print_no_boot_sys_message # this will just halt
-
+	shlo 16, g5, g5 # compiler seems to do this after doing an ldos
+	shro 16, g5, g5 # compiler seems to do this after doing an ldos
+	cmpo g3, g5
+	bne successful_load # this will just halt
+	ldconst no_boot_sys_message, r3
+	bal print_message
+	bal halt_system
 successful_load:
 	# so we have a successful open file at this point
 	# lets compute the proper offset
@@ -216,12 +221,7 @@ done_with_bootstrap:
     lda 0xff000010, g5
     lda sxlibos_iac_reboot_message_start, g6
     synmovq g5, g6
-
-print_no_boot_sys_message:
-	ldconst no_boot_sys_message, r3
-	bal print_message
-	bal halt_system
-
+	
 print_message:
 	# broke ass calling conventions
 	# r3 - pointer to message

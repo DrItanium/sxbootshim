@@ -40,7 +40,7 @@ configuration_space__sdcard_file_begin_addr = configuration_space_page0 + 8;
  * important processor structures. These are aligned correctly within the
  * program itself so it should all work out
  */
-sxlibos_space_start = 0x4000;
+sxlibos_space_start = 0x400;
 sxlibos_iac_reboot_message_start = sxlibos_space_start;
 sxlibos_program_space_start = sxlibos_space_start + 16;
 sxlibos_program_space_end = sxlibos_space_start + 0x40000;
