@@ -9,6 +9,7 @@ MEMORY
 	 * in time
 	 */
 	rom (rx)  : ORIGIN = 0, l = 16k
+    ram (rx)  : ORIGIN = 
 }
 
 /* Layout the different ELF sections into memory using the above described
@@ -41,12 +42,6 @@ configuration_space__sdcard_file_begin_addr = configuration_space_page0 + 8;
  * program itself so it should all work out
  */
 sxlibos_space_start = 0x4000;
-sxlibos_program_space_start = sxlibos_space_start ;
+sxlibos_iac_reboot_message_start = sxlibos_space_start;
+sxlibos_program_space_start = sxlibos_space_start + 16;
 sxlibos_program_space_end = sxlibos_space_start + 0x40000;
-
-/*
- * Make the sat and prcb come _after_ the sxlibos code itself so that we have
- * safe fixed addresses
- */
-sxlibos_system_address_table_start = sxlibos_program_space_end;
-sxlibos_prcb_ptr_start = sxlibos_program_space_end + 0xb0; 

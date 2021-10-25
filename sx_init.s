@@ -156,6 +156,8 @@ fault_proc_table:
  	# g3 - count
  	# g4 - temporary / open port base address
 	# g5 - zero temporary
+	# g6 - computation offset
+ 	# g7 - end address
  	lda configuration_space__sdcard_ctl_addr, g0		# get the address in config space for sdcard ctl
 	ld 0(g0), g0											# overwrite the contents of the register
 	lda configuration_space__sdcard_file_begin_addr, g1 # get the base address of each file
@@ -183,26 +185,36 @@ open_the_file:
 	b print_no_boot_sys_message # this will just halt
 
 successful_load:
-	# so we have a successful halt at this point
-	
+	# so we have a successful open file at this point
+	# lets compute the proper offset
+	ldconst 0x100, g3
+	muli g5, g3, g6  # compute the offset
+	addi g6, g1, g1  # overwrite the file base
+	ldconst 0, g3    # get the count
+	lda sxlibos_program_space_start, g6
+	ld 20(g1), g7 	 # get the size of the file
+	addo g6, g7, g7  # add the base address and size together to make the end address
+					 # we want to do this so that we can test out different aspects of the design
+copy_file_contents_into_ram:
+	# we have to copy the contents of the file byte by byte into memory starting at sxlibos_program_space_start
+	ldos 0(g1), g4 # load the contents of the ioport into a register
+	stob g4, 0(g6) # store the lower half into memory regardless of contents
+	addi g6, 1, g6 # advance the address
+	cmpibge g6, g7, copy_file_contents_into_ram
+close_the_file:
+	ldconst 1, g3 # load one
+	stos g3, 30(g1) # close the file
+done_with_bootstrap:
  /*
   * -- At this point, sxlibos has been copied into memory, 
-  * -- The IAC message, found in the 4 words located at the reinitialize_iac label, contains pointers
+  * -- The IAC message, found in the 4 words located at the beginning of the
+  *    copied program is used to make sure that 
   *    to the current System Address Table, the new RAM based PRCB, and to the Instruction Pointer
   *    labeled start_again_ip
  */
     lda 0xff000010, g5
-    lda reinitialize_iac, g6
+    lda sxlibos_iac_reboot_message_start, g6
     synmovq g5, g6
-
-/* -- Below is a software loop to move data */
-
-move_data:
-    ldq (g1)[g4*1], g8  # load 4 words into g8
-    stq g8, (g2)[g4*1]  # store to RAM block
-    addi g4,16, g4      # increment index
-    cmpibg  g0,g4, move_data # loop until done
-    bx (g14)
 
 print_no_boot_sys_message:
 	ldconst no_boot_sys_message, r3
@@ -245,9 +257,3 @@ _user_type_core:
 _user_reserved_core:
 	flushreg
 	ret
-reinitialize_iac:
-    .word 0x93000000        # reinitialize IAC message
-    .word sxlibos_system_address_table_start 
-    .word sxlibos_prcb_ptr_start      # use newly copied PRCB
-    .word sxlibos_program_space_start # now finish configuration
-
