@@ -189,15 +189,17 @@ open_the_file:
 	bne successful_load # this will just halt
 	ldconst no_boot_sys_message, r3
 	bal print_message
-	bal halt_system
+	b halt_system
 successful_load:
+	ldconst copying_over_msg, r3
+	bal print_message
 	# so we have a successful open file at this point
 	# lets compute the proper offset
 	ldconst 0x100, g3
 	muli g5, g3, g6  # compute the offset
 	addi g6, g1, g1  # overwrite the file base
 	ldconst 0, g3    # get the count
-	lda sxlibos_program_space_start, g6
+	lda sxlibos_space_start, g6 # get the starting address
 	ld 20(g1), g7 	 # get the size of the file
 	addo g6, g7, g7  # add the base address and size together to make the end address
 					 # we want to do this so that we can test out different aspects of the design
@@ -231,16 +233,13 @@ print_message:
 	lda configuration_space__serial0_base, r4
 	ld 0(r4), r4
 	ldconst 0, r5
+	b print_message_loop
 print_message_loop:
 	ldob 0(r3), r6 # load the byte
 	stob r6, 0(r4) # transfer it to the output port
 	addi r3, 1, r3 # increment r3
 	cmpibne r5, r6, print_message_loop
 	bx (g14)
-halt_system:
-	ldconst 0, g14
-	b halt_system
-
 # stub all fault handlers
 _user_trace_core:
 _user_operation_core:
@@ -251,10 +250,13 @@ _user_protection_core:
 _user_machine_core:
 _user_type_core:
 _user_reserved_core:
-	flushreg
-	ret
+halt_system:
+	ldconst 0, g14
+	b halt_system
 file_path:
 	.asciz "sxlibos.rom"
 no_boot_sys_message:
 	.asciz "no sxlibos.rom!\n"
+copying_over_msg:
+	.asciz "copying data over\n"
 	
