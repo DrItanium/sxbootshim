@@ -9,7 +9,6 @@ MEMORY
 	 * in time
 	 */
 	rom (rx)  : ORIGIN = 0, l = 16k
-    ram (rx)  : ORIGIN = 
 }
 
 /* Layout the different ELF sections into memory using the above described
